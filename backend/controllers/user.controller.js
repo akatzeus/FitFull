@@ -628,10 +628,9 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
     }
   });
 
-
   export const approveFamilyMember = asyncHandler(async (req, res) => {
     try {
-      console.log('Route hit')
+      console.log('Route hit');
       const { token, voiceRecording } = req.body;
   
       if (!token || !voiceRecording) {
@@ -648,36 +647,18 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
         return res.status(404).json({ success: false, message: "User not found" });
       }
   
-      // Find the specific family member request by recipient ID
-      const pendingRequest = user.pendingFamilyRequests.find(request => 
-        request.email === recipientId || // If recipientId is the email
-        (request.userId && request.userId.toString() === recipientId) // If recipientId is the MongoDB _id
-      );
-  
-      // if (!pendingRequest) {
-      //   return res.status(404).json({ success: false, message: "Family member request not found" });
-      // }
-  
-      // if (pendingRequest.status === 'approved') {
-      //   return res.status(400).json({ success: false, message: "Request already approved" });
-      // }
-  
-      // Update the request status and add the voice recording
-      // pendingRequest.status = 'approved';
-      // pendingRequest.voiceRecording = voiceRecording;
-      // pendingRequest.approvalToken = undefined;
-      // pendingRequest.approvedAt = new Date();
-  
-      // Move approved request to user's family array if you have one
-      // This depends on your specific data model
-      if (user.family && Array.isArray(user.family)) {
-        user.family.push({
-          email: pendingRequest.email,
-          fullName: pendingRequest.fullName,
-          approved: true,
-          voiceRecording: voiceRecording
-        });
+      // Find the recipient user to get their details
+      const recipientUser = await User.findById(recipientId);
+      if (!recipientUser) {
+        return res.status(404).json({ success: false, message: "Recipient user not found" });
       }
+  
+      // Initialize family array if it doesn't exist
+      if (!user.family) {
+        user.family = [];
+      }
+
+user.family.push(recipientUser._id);
   
       await user.save();
   
@@ -693,9 +674,6 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
       return res.status(500).json({ success: false, message: "Server error during approval" });
     }
   });
-
-  
-
   export const approvalSuccessPage = asyncHandler(async (req, res) => {
     try {
       const { token } = req.params;
