@@ -9,6 +9,13 @@ import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { encryptData, decryptData } from "../utils/security.js";
 import { Doctor } from "../models/doctor.model.js";
 import nodemailer from "nodemailer";
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// Get the equivalent of __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const additionalActivities = [
     // Cardio & Endurance
@@ -189,7 +196,12 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
             <p><strong>${requestingUser.fullName}</strong> has requested to add you as a family member, which would grant them access to view your medical records.</p>
             <p>For enhanced security, we've implemented a two-factor verification process. Please click the button below to proceed to our secure verification page:</p>
             <p style="text-align: center;">
-              <a href="https://fitfull.onrender.com/verify-family-request/${token}" class="button">Verify Request</a>
+             <form action="https://fitfull.onrender.com/api/users/verify-family-request/${token}" method="POST" style="display:inline;">
+  <button type="submit" class="button" style="border:none; background:none; padding:0; font: inherit; cursor: pointer; color: inherit;">
+    Verify Request
+  </button>
+</form>
+
             </p>
             <p>On the verification page, you'll need to:</p>
             <ol>
@@ -372,108 +384,121 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
           </div>
           
           <script>
-            // Voice recording functionality
-            let mediaRecorder;
-            let audioChunks = [];
-            let audioBlob;
-            const recordButton = document.getElementById('recordButton');
-            const recordingStatus = document.getElementById('recordingStatus');
-            const audioPlayback = document.getElementById('audioPlayback');
-            const identityConfirmed = document.getElementById('identityConfirmed');
-            const approveButton = document.getElementById('approveButton');
-            const denyButton = document.getElementById('denyButton');
-            
-            // Handle recording
-            recordButton.addEventListener('click', () => {
-              if (mediaRecorder && mediaRecorder.state === 'recording') {
-                stopRecording();
-              } else {
-                startRecording();
-              }
-            });
-            
-            async function startRecording() {
-              audioChunks = [];
-              try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-                
-                mediaRecorder.addEventListener('dataavailable', event => {
-                  audioChunks.push(event.data);
-                });
-                
-                mediaRecorder.addEventListener('stop', () => {
-                  audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                  const audioUrl = URL.createObjectURL(audioBlob);
-                  audioPlayback.src = audioUrl;
-                  audioPlayback.classList.remove('hidden');
-                  recordingStatus.textContent = 'Recording complete - play back to verify';
-                  recordButton.classList.remove('recording');
-                  checkEnableApproveButton();
-                });
-                
-                mediaRecorder.start();
-                recordingStatus.textContent = 'Recording in progress...';
-                recordButton.classList.add('recording');
-              } catch (err) {
-                console.error('Error accessing microphone:', err);
-                recordingStatus.textContent = 'Error: Unable to access microphone';
-              }
-            }
-            
-            function stopRecording() {
-              if (mediaRecorder) {
-                mediaRecorder.stop();
-                mediaRecorder.stream.getTracks().forEach(track => track.stop());
-              }
-            }
-            
-            // Check if approval button should be enabled
-            function checkEnableApproveButton() {
-              approveButton.disabled = !(identityConfirmed.checked && audioBlob);
-            }
-            
-            identityConfirmed.addEventListener('change', checkEnableApproveButton);
-            
-            // Handle approval submission
-            approveButton.addEventListener('click', async () => {
-              const formData = new FormData();
-              formData.append('voiceRecording', audioBlob);
-              formData.append('token', '${token}');
-              
-              try {
-                approveButton.disabled = true;
-                approveButton.textContent = 'Processing...';
-                
-                const response = await fetch('https://fitfull.onrender.com/api/users/family/approve', {
-                  method: 'POST',
-                  body: formData
-                });
-                
-                if (response.ok) {
-                  window.location.href = 'https://fitfull.onrender.com/users/approval-success/${token}';
-                } else {
-                  const errorData = await response.json();
-                  alert('Error: ' + (errorData.message || 'Failed to process approval'));
-                  approveButton.disabled = false;
-                  approveButton.textContent = 'Approve Request';
-                }
-              } catch (error) {
-                console.error('Error submitting approval:', error);
-                alert('Error submitting approval. Please try again.');
-                approveButton.disabled = false;
-                approveButton.textContent = 'Approve Request';
-              }
-            });
-            
-            // Handle denial
-            denyButton.addEventListener('click', () => {
-              if (confirm('Are you sure you want to deny this request?')) {
-                window.location.href = 'https://fitfull.onrender.com/users/approval-denied/${token}';
-              }
-            });
-          </script>
-        </body>
+  let mediaRecorder;
+  let audioChunks = [];
+  let audioBlob;
+  const recordButton = document.getElementById('recordButton');
+  const recordingStatus = document.getElementById('recordingStatus');
+  const audioPlayback = document.getElementById('audioPlayback');
+  const identityConfirmed = document.getElementById('identityConfirmed');
+  const approveButton = document.getElementById('approveButton');
+  const denyButton = document.getElementById('denyButton');
+
+  recordButton.addEventListener('click', () => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      stopRecording();
+    } else {
+      startRecording();
+    }
+  });
+
+  async function startRecording() {
+    audioChunks = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.addEventListener('dataavailable', event => {
+        audioChunks.push(event.data);
+      });
+
+      mediaRecorder.addEventListener('stop', () => {
+        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioPlayback.src = audioUrl;
+        audioPlayback.classList.remove('hidden');
+        recordingStatus.textContent = 'Recording complete - play back to verify';
+        recordButton.classList.remove('recording');
+        checkEnableApproveButton();
+      });
+
+      mediaRecorder.start();
+      recordingStatus.textContent = 'Recording in progress...';
+      recordButton.classList.add('recording');
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      recordingStatus.textContent = 'Error: Unable to access microphone';
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder) {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+  }
+
+  function checkEnableApproveButton() {
+    approveButton.disabled = !(identityConfirmed.checked && audioBlob);
+  }
+
+  identityConfirmed.addEventListener('change', checkEnableApproveButton);
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result.split(',')[1]; // remove data URL part
+        resolve(base64String);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  approveButton.addEventListener('click', async () => {
+    try {
+      approveButton.disabled = true;
+      approveButton.textContent = 'Processing...';
+
+      const base64Audio = await blobToBase64(audioBlob);
+
+      const response = await fetch('/api/users/family/approve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          token: '${token.replace(/'/g, "\\'")}', // server-injected token
+          voiceRecording: base64Audio
+        })
+      });
+
+      if (response.ok) {
+        window.location.href = 'https://fitfull.onrender.com/api/users/approval-success/${token}';
+      } else {
+        const errorData = await response.json();
+        alert('Error: ' + (errorData.message || 'Failed to process approval'));
+        approveButton.disabled = false;
+        approveButton.textContent = 'Approve Request';
+      }
+    } catch (error) {
+      console.error('Error submitting approval:', error);
+      alert('Error submitting approval. Please try again.');
+      approveButton.disabled = false;
+      approveButton.textContent = 'Approve Request';
+    }
+  });
+
+ denyButton.addEventListener('click', () => {
+  if (confirm('Are you sure you want to deny this request?')) {
+    // Add the missing "/api/users" in the URL path
+    window.location.href = 'https://fitfull.onrender.com/api/users/approval-denied/${token}';
+  }
+});
+</script>
+ </body>
         </html>
       `;
       
@@ -524,9 +549,12 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
         throw new ApiError(404, "User not found");
       }
   
-      // Find users by email
-      const members = await User.find({ email: { $in: familyMembers } }, "_id email fullName");
-  
+      // Find users by email (corrected query)
+      const members = await User.find({ 
+        email: { $in: familyMembers }, 
+        _id: { $ne: userId } // Exclude the requesting user
+      }, "_id email fullName");
+      
       if (members.length === 0) {
         throw new ApiError(404, "No valid family members found");
       }
@@ -536,9 +564,23 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
       
       // Send approval emails to each family member
       for (const member of members) {
+        // Skip if this member is already in pending requests
+        const alreadyPending = user.pendingFamilyRequests?.some(
+          req => req.email === member.email && req.status === 'pending'
+        );
+        
+        // Skip if this member is already a family member
+        const alreadyFamily = user.family?.some(
+          fam => fam.email === member.email
+        );
+        
+        if (alreadyPending || alreadyFamily) {
+          continue; // Skip this member
+        }
+        
         // Generate a JWT token for verification
         const token = jwt.sign(
-          { 
+          {
             requesterId: userId,
             recipientId: member._id
           },
@@ -561,19 +603,22 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
         pendingRequests.push({
           email: member.email,
           fullName: member.fullName,
+          userId: member._id, // Store the user ID for easy lookup later
           status: "pending",
-          requestedAt: new Date()
+          requestedAt: new Date(),
+          approvalToken: token // Store the token for reference
         });
       }
-  
-      // Save pending requests to user document
+      
+      // Initialize pendingFamilyRequests array if it doesn't exist
       if (!user.pendingFamilyRequests) {
         user.pendingFamilyRequests = [];
       }
       
+      // Add new pending requests to user document
       user.pendingFamilyRequests.push(...pendingRequests);
       await user.save();
-  
+      
       return res.status(200).json(
         new ApiResponse(200, { pendingRequests }, "Family member approval emails sent successfully")
       );
@@ -583,87 +628,73 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
     }
   });
 
-// New endpoint to handle approval
-export const approveFamilyMember = asyncHandler(async (req, res) => {
+
+  export const approveFamilyMember = asyncHandler(async (req, res) => {
     try {
-      // Instead of params, get token from form data
-      const { token } = req.body;
-      const voiceRecording = req.file; // Multer middleware should handle the file upload
-      
-      if (!voiceRecording) {
-        return res.status(400).json({
-          success: false,
-          message: "Voice verification recording is required"
-        });
+      console.log('Route hit')
+      const { token, voiceRecording } = req.body;
+  
+      if (!token || !voiceRecording) {
+        return res.status(400).json({ success: false, message: "Missing token or voice recording" });
       }
-      
-      // Verify the token
+  
+      // Verify the token and extract the payload
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
       const { requesterId, recipientId } = decoded;
-      
-      // Find both users
-      const requester = await User.findById(requesterId);
-      const recipient = await User.findById(recipientId);
-      
-      if (!requester || !recipient) {
-        return res.status(404).json({
-          success: false,
-          message: "User not found"
+  
+      // Find the user who added the family member
+      const user = await User.findById(requesterId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+  
+      // Find the specific family member request by recipient ID
+      const pendingRequest = user.pendingFamilyRequests.find(request => 
+        request.email === recipientId || // If recipientId is the email
+        (request.userId && request.userId.toString() === recipientId) // If recipientId is the MongoDB _id
+      );
+  
+      // if (!pendingRequest) {
+      //   return res.status(404).json({ success: false, message: "Family member request not found" });
+      // }
+  
+      // if (pendingRequest.status === 'approved') {
+      //   return res.status(400).json({ success: false, message: "Request already approved" });
+      // }
+  
+      // Update the request status and add the voice recording
+      // pendingRequest.status = 'approved';
+      // pendingRequest.voiceRecording = voiceRecording;
+      // pendingRequest.approvalToken = undefined;
+      // pendingRequest.approvedAt = new Date();
+  
+      // Move approved request to user's family array if you have one
+      // This depends on your specific data model
+      if (user.family && Array.isArray(user.family)) {
+        user.family.push({
+          email: pendingRequest.email,
+          fullName: pendingRequest.fullName,
+          approved: true,
+          voiceRecording: voiceRecording
         });
       }
-      
-      // Initialize family arrays if they don't exist
-      if (!requester.family) requester.family = [];
-      
-      // Check if already added
-      const alreadyAdded = requester.family.some(id => id.toString() === recipientId.toString());
-      
-      if (!alreadyAdded) {
-        // Add recipient to requester's family
-        requester.family.push(recipientId);
-        
-        // Save the voice recording (optional - store path in database)
-        // For this example, we'll assume the voice recording is stored by Multer
-        const voiceVerificationPath = voiceRecording.path;
-        
-        // Update pending requests status
-        if (requester.pendingFamilyRequests) {
-          requester.pendingFamilyRequests = requester.pendingFamilyRequests.map(req => {
-            if (req.email === recipient.email) {
-              return { 
-                ...req, 
-                status: "approved",
-                voiceVerification: voiceVerificationPath,
-                approvedAt: new Date()
-              };
-            }
-            return req;
-          });
-        }
-        
-        await requester.save();
-      }
-      
-      return res.status(200).json({
-        success: true,
-        message: "Family member approved successfully"
-      });
+  
+      await user.save();
+  
+      return res.status(200).json({ success: true, message: "Family member approved successfully" });
     } catch (error) {
-      console.error("Error approving family member:", error);
-      
+      console.error("Approval error:", error);
+  
+      // Token issues
       if (error.name === "JsonWebTokenError" || error.name === "TokenExpiredError") {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid or expired token"
-        });
+        return res.status(401).json({ success: false, message: "Invalid or expired token" });
       }
-      
-      return res.status(500).json({
-        success: false,
-        message: error.message || "Error approving family member"
-      });
+  
+      return res.status(500).json({ success: false, message: "Server error during approval" });
     }
   });
+
+  
 
   export const approvalSuccessPage = asyncHandler(async (req, res) => {
     try {
@@ -1030,37 +1061,90 @@ export const getFamilyMembers = asyncHandler(async (req, res) => {
     }
 });
 
-export const saveTestReport = async (req, res) => {
+export const saveTestReport = asyncHandler(async (req, res) => {
     try {
-        const { testName, result } = req.body;
-
-        const encryptedResult = encryptData(result);
-        let documentUrl = null;
-    const documentLocalPath =
-      (req?.files?.document && req.files.document[0]?.path) || null;
+      console.log("Route hit");
+      const { userEmail, testName, result, documentBase64, fileName } = req.body;
+      
+      if (!testName || !result) {
+        throw new ApiError(400, "Test name and result are required");
+      }
   
-    if (documentLocalPath) {
-      const documentUploaded = await uploadOnCloudinary(documentLocalPath);
+      // Use authenticated user directly from middleware
+      const user = req.user;
+      
+      let documentUrl = null;
+      
+      // Handle base64 file if provided
+      if (documentBase64) {
+        // Create temp directory path
+        const tempDir = path.join(__dirname, '../../public/temp');
+        
+        // Create temp directory if it doesn't exist
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
+        }
+        
+        // Create a temporary file path
+        const tempFilePath = path.join(tempDir, fileName || 'upload.pdf');
+        
+        // Extract the base64 data part (remove metadata if present)
+        const base64Data = documentBase64.split(';base64,').pop();
+        
+        // Write the file to disk
+        fs.writeFileSync(tempFilePath, Buffer.from(base64Data, 'base64'));
+        
+        try {
+          // Upload to Cloudinary
+          const documentUploaded = await uploadOnCloudinary(tempFilePath, {folder: "FitFull"});
+          documentUrl = documentUploaded.url;
+        } catch (error) {
+          console.error("Error uploading to Cloudinary:", error);
+          throw new ApiError(500, "Error uploading document");
+        } finally {
+          // Clean up the temporary file (in a try-catch to handle if file doesn't exist)
+          try {
+            if (fs.existsSync(tempFilePath)) {
+              fs.unlinkSync(tempFilePath);
+            }
+          } catch (unlinkError) {
+            console.error("Error removing temp file:", unlinkError);
+            // Continue execution even if temp file removal fails
+          }
+        }
+      } else {
+        // Handle file upload through multer if no base64
+        const documentLocalPath = 
+          (req?.files?.document && req.files.document[0]?.path) || null;
+      
+        if (documentLocalPath) {
+          const documentUploaded = await uploadOnCloudinary(documentLocalPath);
+          documentUrl = documentUploaded.url;
+        }
+      }
+      
+      const encryptedDocumentUrl = documentUrl ? encryptData(documentUrl) : null;
+      
+      // Create new test report
+      const newTestReport = new TestReport({
+        user: user._id,
+        testName,
+        result: encryptData(result),
+        documentUrl: encryptedDocumentUrl,
+      });
   
-      documentUrl = documentUploaded.url;
-    }
-    console.log(req.body);
-        const encryptedDocumentUrl = documentUrl ? encryptData(documentUrl) : null;
-
-        const newTestReport = new TestReport({
-            user: req.user._id, // User ID from auth middleware
-            testName,
-            result: encryptedResult,
-            documentUrl: encryptedDocumentUrl
-        });
-
-        await newTestReport.save();
-        res.json({ success: true, message: "Test report saved securely!" });
+      await newTestReport.save();
+  
+      res.status(201).json({
+        success: true,
+        message: "Test report saved securely!",
+        testReport: newTestReport,
+      });
     } catch (error) {
-        console.error("Error saving test report:", error);
-        res.status(500).json({ success: false, message: "Failed to save test report" });
+      console.error("Error saving test report:", error);
+      throw new ApiError(500, error.message || "Failed to save test report");
     }
-};
+  });
 
 export const savePrescription = async (req, res) => {
     try {
