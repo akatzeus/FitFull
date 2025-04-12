@@ -151,7 +151,19 @@ const generateAccessAndRefreshTokens = async (userId) => {
       );
     }
 };
+export const getAllUsersWithDetails = async (req, res) => {
+  try {
+    const users = await User.find()
+      .populate('prescriptions')
+      .populate('testReports')
+      .populate('family');
 
+    res.status(200).json(users);
+  } catch (err) {
+    console.error("Error fetching users with full details:", err);
+    res.status(500).json({ message: 'Failed to fetch users with details', error: err.message });
+  }
+};
 
 import jwt from "jsonwebtoken";
 
@@ -223,6 +235,7 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
 
   export const getVerificationPage = asyncHandler(async (req, res) => {
     try {
+      console.log('Route hit');
       const { token } = req.params;
       
       // Verify the token but don't process approval yet
@@ -239,269 +252,321 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
       
       // Render the verification page
       const verificationPage = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Family Request Verification</title>
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f5f5f5; }
-            .container { max-width: 800px; margin: 30px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .header { background-color: #4CAF50; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; margin: -20px -20px 20px; }
-            .content { padding: 20px 0; }
-            .verifier { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
-            .requester-info { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-            .button { 
-              display: inline-block; 
-              background-color: #4CAF50; 
-              color: white; 
-              padding: 12px 24px; 
-              text-decoration: none; 
-              border-radius: 5px; 
-              border: none;
-              cursor: pointer;
-              font-size: 16px;
-              margin-top: 10px;
-            }
-            .button:disabled {
-              background-color: #cccccc;
-              cursor: not-allowed;
-            }
-            .button-secondary {
-              background-color: #f44336;
-            }
-            .voice-controls {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              margin: 20px 0;
-            }
-            .record-button {
-              display: inline-block;
-              background-color: #f44336;
-              color: white;
-              width: 60px;
-              height: 60px;
-              border-radius: 50%;
-              text-align: center;
-              line-height: 60px;
-              font-size: 24px;
-              cursor: pointer;
-              margin-bottom: 10px;
-            }
-            .recording {
-              animation: pulse 1.5s infinite;
-            }
-            .hidden { display: none; }
-            .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
-            .verification-steps {
-              counter-reset: step;
-              margin: 30px 0;
-            }
-            .step {
-              position: relative;
-              padding-left: 50px;
-              margin-bottom: 20px;
-            }
-            .step:before {
-              counter-increment: step;
-              content: counter(step);
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 30px;
-              height: 30px;
-              background-color: #4CAF50;
-              color: white;
-              border-radius: 50%;
-              text-align: center;
-              line-height: 30px;
-              font-weight: bold;
-            }
-            @keyframes pulse {
-              0% { transform: scale(1); }
-              50% { transform: scale(1.1); }
-              100% { transform: scale(1); }
-            }
-            #confirmText {
-              font-size: 18px;
-              font-weight: bold;
-              margin: 20px 0;
-              padding: 10px;
-              background-color: #f0f8ff;
-              border-radius: 5px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Family Request Verification</h1>
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Family Request Verification</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 800px; margin: 30px auto; padding: 20px; background-color: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .header { background-color: #4CAF50; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; margin: -20px -20px 20px; }
+          .content { padding: 20px 0; }
+          .verifier { margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+          .requester-info { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+          .button { 
+            display: inline-block; 
+            background-color: #4CAF50; 
+            color: white; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+          }
+          .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+          }
+          .button-secondary {
+            background-color: #f44336;
+          }
+          .voice-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+          }
+          .record-button {
+            display: inline-block;
+            background-color: #f44336;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 60px;
+            font-size: 24px;
+            cursor: pointer;
+            margin-bottom: 10px;
+          }
+          .recording {
+            animation: pulse 1.5s infinite;
+          }
+          .hidden { display: none; }
+          .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
+          .verification-steps {
+            counter-reset: step;
+            margin: 30px 0;
+          }
+          .step {
+            position: relative;
+            padding-left: 50px;
+            margin-bottom: 20px;
+          }
+          .step:before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 30px;
+            height: 30px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+          }
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+          }
+          #confirmText {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Family Request Verification</h1>
+          </div>
+          <div class="content">
+            <h2>Hello ${recipient.fullName},</h2>
+            
+            <div class="requester-info">
+              <h3>Request Details:</h3>
+              <p><strong>${requester.fullName}</strong> (${requester.email}) has requested to add you as a family member.</p>
+              <p>This will grant them access to view your medical records and health information.</p>
             </div>
-            <div class="content">
-              <h2>Hello ${recipient.fullName},</h2>
-              
-              <div class="requester-info">
-                <h3>Request Details:</h3>
-                <p><strong>${requester.fullName}</strong> (${requester.email}) has requested to add you as a family member.</p>
-                <p>This will grant them access to view your medical records and health information.</p>
+            
+            <div class="verification-steps">
+              <div class="step">
+                <h3>Verify Identity</h3>
+                <p>Please confirm that you know <strong>${requester.fullName}</strong> and are comfortable sharing your health information with them.</p>
+                <label>
+                  <input type="checkbox" id="identityConfirmed"> Yes, I confirm this request is legitimate
+                </label>
               </div>
               
-              <div class="verification-steps">
-                <div class="step">
-                  <h3>Verify Identity</h3>
-                  <p>Please confirm that you know <strong>${requester.fullName}</strong> and are comfortable sharing your health information with them.</p>
-                  <label>
-                    <input type="checkbox" id="identityConfirmed"> Yes, I confirm this request is legitimate
-                  </label>
-                </div>
+              <div class="step">
+                <h3>Voice Verification</h3>
+                <p>For added security, please record yourself saying the following phrase:</p>
+                <div id="confirmText">"I, ${recipient.fullName}, approve ${requester.fullName} to access my medical records."</div>
                 
-                <div class="step">
-                  <h3>Voice Verification</h3>
-                  <p>For added security, please record yourself saying the following phrase:</p>
-                  <div id="confirmText">"I, ${recipient.fullName}, approve ${requester.fullName} to access my medical records."</div>
-                  
-                  <div class="voice-controls">
-                    <div class="record-button" id="recordButton">
-                      <i>🎤</i>
-                    </div>
-                    <p id="recordingStatus">Click to start recording</p>
-                    <audio id="audioPlayback" controls class="hidden"></audio>
+                <div class="voice-controls">
+                  <div class="record-button" id="recordButton">
+                    <i>🎤</i>
                   </div>
-                </div>
-                
-                <div class="step">
-                  <h3>Final Approval</h3>
-                  <p>Once you've completed the steps above, click the button below to approve this request:</p>
-                  <button id="approveButton" class="button" disabled>Approve Request</button>
-                  <button id="denyButton" class="button button-secondary">Deny Request</button>
+                  <p id="recordingStatus">Click to start recording</p>
+                  <audio id="audioPlayback" controls class="hidden"></audio>
                 </div>
               </div>
-            </div>
-            <div class="footer">
-              <p>This is a secure verification page. If you have any concerns, please contact support.</p>
+              
+              <div class="step">
+                <h3>Final Approval</h3>
+                <p>Once you've completed the steps above, click the button below to approve this request:</p>
+                <button id="approveButton" class="button" disabled>Approve Request</button>
+                <button id="denyButton" class="button button-secondary">Deny Request</button>
+              </div>
             </div>
           </div>
-          
-          <script>
-  let mediaRecorder;
-  let audioChunks = [];
-  let audioBlob;
-  const recordButton = document.getElementById('recordButton');
-  const recordingStatus = document.getElementById('recordingStatus');
-  const audioPlayback = document.getElementById('audioPlayback');
-  const identityConfirmed = document.getElementById('identityConfirmed');
-  const approveButton = document.getElementById('approveButton');
-  const denyButton = document.getElementById('denyButton');
+          <div class="footer">
+            <p>This is a secure verification page. If you have any concerns, please contact support.</p>
+          </div>
+        </div>
+        
+        <script>
+let mediaRecorder;
+let audioChunks = [];
+let audioBlob;
+const recordButton = document.getElementById('recordButton');
+const recordingStatus = document.getElementById('recordingStatus');
+const audioPlayback = document.getElementById('audioPlayback');
+const identityConfirmed = document.getElementById('identityConfirmed');
+const approveButton = document.getElementById('approveButton');
+const denyButton = document.getElementById('denyButton');
+let transcription = "";
 
-  recordButton.addEventListener('click', () => {
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      stopRecording();
-    } else {
-      startRecording();
-    }
-  });
+// Define checkEnableApproveButton function early to avoid scope issues
+function checkEnableApproveButton() {
+  approveButton.disabled = !(identityConfirmed.checked && audioBlob);
+}
 
-  async function startRecording() {
-    audioChunks = [];
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorder = new MediaRecorder(stream);
-
-      mediaRecorder.addEventListener('dataavailable', event => {
-        audioChunks.push(event.data);
-      });
-
-      mediaRecorder.addEventListener('stop', () => {
-        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        audioPlayback.src = audioUrl;
-        audioPlayback.classList.remove('hidden');
-        recordingStatus.textContent = 'Recording complete - play back to verify';
-        recordButton.classList.remove('recording');
-        checkEnableApproveButton();
-      });
-
-      mediaRecorder.start();
-      recordingStatus.textContent = 'Recording in progress...';
-      recordButton.classList.add('recording');
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      recordingStatus.textContent = 'Error: Unable to access microphone';
-    }
+recordButton.addEventListener('click', () => {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopRecording();
+  } else {
+    startRecording();
   }
+});
 
-  function stopRecording() {
-    if (mediaRecorder) {
-      mediaRecorder.stop();
-      mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
-  }
-
-  function checkEnableApproveButton() {
-    approveButton.disabled = !(identityConfirmed.checked && audioBlob);
-  }
-
-  identityConfirmed.addEventListener('change', checkEnableApproveButton);
-
-  function blobToBase64(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result.split(',')[1]; // remove data URL part
-        resolve(base64String);
+async function startRecording() {
+  audioChunks = [];
+  transcription = "";
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    
+    // Set up speech recognition right away
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      
+      recognition.onresult = function(event) {
+        // Get the latest transcription result
+        const current = event.resultIndex;
+        const transcript = event.results[current][0].transcript;
+        
+        // Append to the full transcription
+        transcription += transcript + " ";
+        // Removed the recordingStatus.textContent line
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  approveButton.addEventListener('click', async () => {
-    try {
-      approveButton.disabled = true;
-      approveButton.textContent = 'Processing...';
-
-      const base64Audio = await blobToBase64(audioBlob);
-
-      const response = await fetch('/api/users/family/approve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          token: '${token.replace(/'/g, "\\'")}', // server-injected token
-          voiceRecording: base64Audio
-        })
+      
+      recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        // Removed the recordingStatus.textContent line
+      };
+      
+      // Start recognition at the same time as recording
+      recognition.start();
+      
+      // When recording stops, also stop recognition
+      mediaRecorder.addEventListener('stop', () => {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.log('Recognition may have already stopped:', e);
+        }
       });
+    }
 
-      if (response.ok) {
-        window.location.href = 'https://fitfull.onrender.com/api/users/approval-success/${token}';
+    // Handle the audio data from recording
+    mediaRecorder.addEventListener('dataavailable', event => {
+      audioChunks.push(event.data);
+    });
+
+    mediaRecorder.addEventListener('stop', () => {
+      audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioPlayback.src = audioUrl;
+      audioPlayback.classList.remove('hidden');
+      
+      // Check for negative words in transcription without updating status
+      if (transcription) {
+        const negativeWords = ['no', 'reject', 'decline', 'disapprove', 'cancel', 'hate', 'dislike', 'negative', 'stop', 'don\\'t'];
+        const hasNegativeWords = negativeWords.some(word => 
+          transcription.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (hasNegativeWords) {
+          approveButton.disabled = true;
+        } else {
+          checkEnableApproveButton();
+        }
       } else {
-        const errorData = await response.json();
-        alert('Error: ' + (errorData.message || 'Failed to process approval'));
-        approveButton.disabled = false;
-        approveButton.textContent = 'Approve Request';
+        checkEnableApproveButton();
       }
-    } catch (error) {
-      console.error('Error submitting approval:', error);
-      alert('Error submitting approval. Please try again.');
+      
+      recordButton.classList.remove('recording');
+    });
+
+    mediaRecorder.start();
+    recordButton.classList.add('recording');
+  } catch (err) {
+    console.error('Error accessing microphone:', err);
+  }
+}
+function stopRecording() {
+  if (mediaRecorder) {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(track => track.stop());
+  }
+}
+
+identityConfirmed.addEventListener('change', checkEnableApproveButton);
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result.split(',')[1]; // remove data URL part
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+approveButton.addEventListener('click', async () => {
+  try {
+    approveButton.disabled = true;
+    approveButton.textContent = 'Processing...';
+
+    const base64Audio = await blobToBase64(audioBlob);
+
+    const response = await fetch('/api/users/family/approve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        token: '${token}',
+        voiceRecording: base64Audio,
+        transcription: transcription // Send the transcription along with the audio
+      })
+    });
+
+    if (response.ok) {
+      window.location.href = 'https://fitfull.onrender.com/api/users/approval-success/${token}';
+    } else {
+      const errorData = await response.json();
+      alert('Error: ' + (errorData.message || 'Failed to process approval'));
       approveButton.disabled = false;
       approveButton.textContent = 'Approve Request';
     }
-  });
+  } catch (error) {
+    console.error('Error submitting approval:', error);
+    alert('Error submitting approval. Please try again.');
+    approveButton.disabled = false;
+    approveButton.textContent = 'Approve Request';
+  }
+});
 
- denyButton.addEventListener('click', () => {
+denyButton.addEventListener('click', () => {
   if (confirm('Are you sure you want to deny this request?')) {
-    // Add the missing "/api/users" in the URL path
     window.location.href = 'https://fitfull.onrender.com/api/users/approval-denied/${token}';
   }
 });
 </script>
- </body>
-        </html>
-      `;
-      
+</body>
+      </html>
+    `;
       return res.status(200).send(verificationPage);
     } catch (error) {
       console.error("Error displaying verification page:", error);
@@ -539,7 +604,7 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
       const { familyMembers } = req.body; // Array of emails
       const userId = req.user._id; // Current user's ID from auth middleware
   
-      if (!familyMembers || !Array.isArray(familyMembers)) {
+      if (!familyMembers ) {
         throw new ApiError(400, "Family members must be provided as an array of emails");
       }
   
@@ -628,13 +693,31 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
     }
   });
 
+
   export const approveFamilyMember = asyncHandler(async (req, res) => {
     try {
       console.log('Route hit');
-      const { token, voiceRecording } = req.body;
+      const { token, voiceRecording, transcription } = req.body;
   
       if (!token || !voiceRecording) {
         return res.status(400).json({ success: false, message: "Missing token or voice recording" });
+      }
+  
+      // Check transcription for negative words if it exists
+      if (transcription) {
+        console.log('Checking transcription:', transcription);
+        const negativeWords = ['no', 'reject', 'decline', 'disapprove', 'cancel', 'hate', 'dislike', 'negative', 'stop', 'don\'t'];
+        
+        const hasNegativeWords = negativeWords.some(word => 
+          transcription.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (hasNegativeWords) {
+          return res.status(400).json({ 
+            success: false, 
+            message: "Approval rejected due to negative sentiment in voice recording" 
+          });
+        }
       }
   
       // Verify the token and extract the payload
@@ -657,9 +740,17 @@ const createApprovalEmailTemplate = (requestingUser, token, recipientName) => {
       if (!user.family) {
         user.family = [];
       }
-
-user.family.push(recipientUser._id);
   
+      // Check if recipient is already in the user's family
+      const alreadyInFamily = user.family.some(memberId => 
+        memberId.toString() === recipientUser._id.toString()
+      );
+      
+      if (alreadyInFamily) {
+        return res.status(400).json({ success: false, message: "User is already a family member" });
+      }
+  
+      user.family.push(recipientUser._id);
       await user.save();
   
       return res.status(200).json({ success: true, message: "Family member approved successfully" });
@@ -674,6 +765,9 @@ user.family.push(recipientUser._id);
       return res.status(500).json({ success: false, message: "Server error during approval" });
     }
   });
+
+  
+
   export const approvalSuccessPage = asyncHandler(async (req, res) => {
     try {
       const { token } = req.params;
@@ -1264,15 +1358,6 @@ const getFamilyTest = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to retrieve test report" });
     }
 };
-export const getUsers = asyncHandler(async (req, res) => {
-    try {
-      const users = await User.find({}, 'name email'); // Fetch only necessary fields
-      res.status(200).json({ users });
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      throw new ApiError(500, 'Failed to fetch users');
-    }
-  });
 
   export const getDoctors = asyncHandler(async (req, res) => {
     try {

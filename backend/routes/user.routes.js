@@ -11,8 +11,9 @@ import {
   getFamDiag, getFamPresc, getDiagnosisReport, getFamilyTest, addDiagnosisReport,
   savePrescription,
   saveTestReport,
+  approveFamilyMember, approvalDeniedPage, approvalSuccessPage, getVerificationPage,
   //getCurrentUser,
-  // getUsers
+  getAllUsersWithDetails
 } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { endSession, joinSession } from "../controllers/doctor.controller.js";
@@ -21,11 +22,12 @@ const router = express.Router();
 // Public routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+router.get('/full', getAllUsersWithDetails);
 // Protected routes - Require JWT authentication
 router.post("/family/add", user_verifyJWT, addFamilyMembers);
 router.delete("/family/remove", user_verifyJWT, removeFamilyMember);
 router.get("/family", user_verifyJWT, getFamilyMembers);
-router.post("/addReport",  upload.single("document"), user_verifyJWT, saveTestReport);
+router.post("/addReport",  express.json({ limit: '1000mb' }), user_verifyJWT, saveTestReport);
 router.post('/addPresc', user_verifyJWT, savePrescription);
 router.post('/addDiagnosis', user_verifyJWT, addDiagnosisReport);
 router.get("/prescriptions", user_verifyJWT, getPrescription);
@@ -36,7 +38,11 @@ router.post("/famPresc", user_verifyJWT, getFamPresc);
 router.post("/famDiagnosis", user_verifyJWT, getFamDiag);
 router.post("/join-session", user_verifyJWT, joinSession);
 router.post("/end", user_verifyJWT, endSession);
-//router.get("/current", user_verifyJWT, getCurrentUser); 
+router.post("/verify-family-request/:token", getVerificationPage);
+router.post("/family/approve", express.json({limit: '1000mb'}), approveFamilyMember);
+router.get("/approval-success/:token", approvalSuccessPage);
+router.get("/approval-denied/:token", approvalDeniedPage);
+ 
 
 
 export default router;
